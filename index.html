@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Charley's Label Sheet</title>
+<meta name="theme-color" content="#f3eee6">
+<meta name="description" content="Charley's Trading Co. — turn an Amazon label + invoice into one A4 page and share it to WhatsApp.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: one white card on a warm ground — dashed drop zone, file rows, preview, yellow action */
+:root{
+  color-scheme: light;
+  --ground:#f3eee6; --card:#ffffff; --zone:#faf7f1; --zone-line:#d9d3c8; --row-hi:#f8f5ee;
+  --ink:#1d2327; --muted:#878c90; --faint:#b5b8ba;
+  --teal:#11756f; --teal-dk:#0b5f5a; --teal-lt:#e3f0ee; --paper:#e9e6e0;
+  --yellow:#fbcb5c; --yellow-dk:#f2b934; --track:#f4efe3; --err:#ee6a3c;
+  --font:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--font);font-size:15px;line-height:1.45;-webkit-tap-highlight-color:transparent}
+.wrap{max-width:30rem;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;gap:1rem;
+  padding:calc(env(safe-area-inset-top,0px) + 1.1rem) max(16px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 1.5rem) max(16px,env(safe-area-inset-left,0px))}
+
+.top{display:flex;align-items:baseline;justify-content:space-between;gap:.75rem;padding:0 .25rem}
+.biz{font-weight:700;font-size:1rem;letter-spacing:-.01em}
+.biz small{display:block;font-weight:500;font-size:.8rem;color:var(--muted);letter-spacing:0}
+.install{font:inherit;font-size:.85rem;font-weight:600;color:var(--teal);background:var(--card);border:0;border-radius:999px;padding:.45rem .9rem;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.06)}
+
+.card{background:var(--card);border-radius:28px;padding:1.1rem;display:flex;flex-direction:column;gap:1rem;box-shadow:0 1px 2px rgba(60,45,20,.04),0 12px 32px rgba(60,45,20,.07)}
+
+/* Drop zone */
+.zone{position:relative;background:var(--zone);border-radius:20px;padding:2.2rem 1rem 2rem;text-align:center;display:flex;flex-direction:column;align-items:center;gap:.35rem;transition:background .15s,border-color .15s}
+.zone.dashed{border:1.5px dashed var(--zone-line)}
+.zone.drag{background:var(--teal-lt);border-color:var(--teal)}
+.zone input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer}
+.zone:focus-within{outline:2px solid var(--teal);outline-offset:3px}
+.zone-title{margin:.9rem 0 0;font-size:1.05rem;font-weight:500;color:var(--ink)}
+.zone-title .link{color:var(--teal);font-weight:600}
+.zone-sub{margin:0;font-size:.82rem;color:var(--muted)}
+.docicon{width:5rem;height:auto;display:block}
+
+/* File rows */
+.files{display:flex;flex-direction:column;gap:.25rem}
+.file{display:flex;align-items:center;gap:.8rem;padding:.65rem .6rem;border-radius:12px}
+.file.hi{background:var(--row-hi)}
+.badge{flex:0 0 auto;width:2.6rem;height:2.6rem;border-radius:50%;background:var(--paper);display:grid;place-items:center;position:relative;overflow:hidden}
+.badge::after{content:"PDF";position:absolute;left:.25rem;right:.25rem;bottom:.55rem;height:1.05rem;border-radius:3px;background:var(--teal);color:#fff;font-size:.55rem;font-weight:700;display:grid;place-items:center;letter-spacing:.02em}
+.badge::before{content:"";position:absolute;left:.7rem;right:.7rem;top:.5rem;height:.9rem;border-radius:2px;background:#f7f5f1;box-shadow:inset 0 3px 0 -2px var(--faint)}
+.fbody{flex:1;min-width:0;display:flex;flex-direction:column;gap:.25rem}
+.fname{font-weight:500;font-size:.95rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fmeta{font-size:.78rem;color:var(--muted);font-weight:500}
+.bar-row{display:flex;align-items:center;gap:.75rem}
+.bar{flex:1;height:4px;border-radius:4px;background:var(--track);overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--yellow);border-radius:4px;transition:width .35s ease}
+.pct{font-size:.78rem;color:var(--ink);font-variant-numeric:tabular-nums;min-width:2.4rem;text-align:right}
+.file.failed .fname,.file.failed .fmeta{color:var(--err)}
+.iconbtn{flex:0 0 auto;width:2rem;height:2rem;border-radius:50%;border:0;background:transparent;color:var(--ink);display:grid;place-items:center;cursor:pointer}
+.iconbtn:hover{background:var(--row-hi)}
+.iconbtn svg{width:1rem;height:1rem}
+.retry{background:var(--err);color:#fff;width:1.5rem;height:1.5rem}
+.retry:hover{background:var(--err)}
+
+/* Name editing inside the row */
+.name-edit{display:flex;align-items:center;gap:.15rem;border-bottom:1.5px solid transparent;min-width:0}
+.name-edit:focus-within{border-bottom-color:var(--teal)}
+.name-edit input{flex:0 1 auto;field-sizing:content;min-width:2ch;max-width:100%;font:inherit;font-weight:500;font-size:.95rem;color:var(--ink);background:transparent;border:0;padding:0;outline:none}
+.name-edit span{font-size:.95rem;font-weight:500;color:var(--muted)}
+
+/* Preview */
+.preview{position:relative;background:var(--teal);border-radius:20px;padding:1.1rem 1rem 2.4rem;display:flex;justify-content:center;overflow:hidden}
+.preview::after{content:"";position:absolute;inset:auto 0 0;height:4.5rem;background:linear-gradient(transparent,rgba(0,0,0,.28));pointer-events:none}
+.preview canvas{width:100%;max-width:13.5rem;height:auto;border-radius:4px;background:#fff;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+.pagetag{position:absolute;left:0;right:0;bottom:.75rem;text-align:center;color:#fff;font-size:.82rem;font-weight:600;z-index:1}
+
+.note{margin:0;padding:0 .35rem;font-size:.85rem;color:var(--muted)}
+.btn{display:flex;align-items:center;justify-content:center;gap:.55rem;width:100%;font:inherit;font-weight:600;font-size:1.05rem;color:var(--ink);background:var(--yellow);border:0;border-radius:14px;padding:1rem;cursor:pointer;text-decoration:none}
+.btn:active{background:var(--yellow-dk)}
+.btn:focus-visible{outline:2px solid var(--teal);outline-offset:3px}
+.btn svg{width:1.25rem;height:1.25rem}
+.links{display:flex;justify-content:center;gap:1.75rem}
+.textbtn{font:inherit;font-size:.92rem;font-weight:600;color:var(--teal);background:none;border:0;padding:.35rem;cursor:pointer;text-decoration:none}
+.msg{margin:0;padding:0 .35rem;font-size:.86rem;color:var(--err);font-weight:500}
+
+.help{padding:0 .5rem;font-size:.85rem;color:var(--muted)}
+.help ol{margin:.35rem 0 0;padding-left:1.1rem;display:flex;flex-direction:column;gap:.25rem}
+.help b{color:var(--ink);font-weight:600}
+.help h2{margin:0;font-size:.78rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+.foot{margin-top:auto;text-align:center;font-size:.76rem;color:var(--faint)}
+[hidden]{display:none!important}
+@media (prefers-reduced-motion:reduce){.bar i,.zone{transition:none}}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header class="top">
+    <div class="biz">Charley's Trading Co.<small>Amazon label sheet</small></div>
+    <button class="install" id="install" type="button" hidden>Install app</button>
+  </header>
+
+  <!-- 1. Pick -->
+  <section class="card" id="start">
+    <label class="zone dashed" id="zone" for="file">
+      <svg class="docicon" viewBox="0 0 80 100" aria-hidden="true">
+        <rect x="10" y="2" width="58" height="62" rx="3" fill="#e9e6e0"/>
+        <rect x="18" y="12" width="42" height="5" rx="1" fill="#b5b8ba"/>
+        <rect x="18" y="22" width="42" height="2.5" rx="1" fill="#cfd1d2"/>
+        <rect x="18" y="28" width="42" height="2.5" rx="1" fill="#cfd1d2"/>
+        <rect x="18" y="34" width="30" height="2.5" rx="1" fill="#cfd1d2"/>
+        <path d="M2 50a3 3 0 0 1 3-3h24l6 6h40a3 3 0 0 1 3 3v39a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3z" fill="#0b5f5a"/>
+        <rect x="2" y="56" width="76" height="42" rx="3" fill="#11756f"/>
+        <text x="40" y="84" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-weight="700" font-size="17" fill="#fff">PDF</text>
+      </svg>
+      <p class="zone-title">Add your Amazon PDF here, or <span class="link">Browse</span></p>
+      <p class="zone-sub">Supports: PDF with label + invoice</p>
+      <input id="file" type="file" accept="application/pdf,.pdf" aria-label="Choose Amazon PDF">
+    </label>
+  </section>
+
+  <!-- 2. Working / failed -->
+  <section class="card" id="working" hidden>
+    <div class="zone">
+      <svg class="docicon" viewBox="0 0 80 100" aria-hidden="true">
+        <rect x="10" y="2" width="58" height="62" rx="3" fill="#e9e6e0"/>
+        <rect x="18" y="12" width="42" height="5" rx="1" fill="#b5b8ba"/>
+        <rect x="18" y="22" width="42" height="2.5" rx="1" fill="#cfd1d2"/>
+        <rect x="18" y="28" width="42" height="2.5" rx="1" fill="#cfd1d2"/>
+        <path d="M2 50a3 3 0 0 1 3-3h24l6 6h40a3 3 0 0 1 3 3v39a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3z" fill="#0b5f5a"/>
+        <rect x="2" y="56" width="76" height="42" rx="3" fill="#11756f"/>
+        <circle cx="40" cy="77" r="9" fill="none" stroke="#fff" stroke-width="2.5"/>
+        <path d="M40 82v-10m-4 4 4-4 4 4" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <p class="zone-title" id="workTitle">Making your A4 sheet.</p>
+      <p class="zone-sub">Label on top, invoice below</p>
+    </div>
+    <div class="files">
+      <div class="file" id="workRow">
+        <div class="badge" aria-hidden="true"></div>
+        <div class="fbody">
+          <div class="fname" id="workName">Filename.pdf</div>
+          <div class="bar-row" id="workBarRow"><div class="bar"><i id="workBar"></i></div><span class="pct" id="workPct">0%</span></div>
+          <div class="fmeta" id="workFail" hidden>Failed · not an Amazon label PDF?</div>
+        </div>
+        <button class="iconbtn retry" id="retry" type="button" aria-label="Choose another file" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v4h-4"/></svg>
+        </button>
+        <button class="iconbtn" id="cancel" type="button" aria-label="Cancel">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. Result -->
+  <section class="card" id="result" hidden>
+    <div class="preview">
+      <canvas id="canvas" aria-label="Preview of the A4 page"></canvas>
+      <div class="pagetag" id="pageTag">A4 · Page 1/1</div>
+    </div>
+    <div class="files">
+      <div class="file hi">
+        <div class="badge" aria-hidden="true"></div>
+        <div class="fbody">
+          <label class="name-edit" for="fname"><input id="fname" type="text" autocomplete="off" spellcheck="false" aria-label="File name"><span>.pdf</span></label>
+          <div class="fmeta" id="resMeta">—</div>
+        </div>
+        <button class="iconbtn" id="again" type="button" aria-label="Start over with another PDF">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+    </div>
+    <p class="note">Tap the name to change it. Ask the print shop for <b>A4 at 100%</b>, then cut along the middle.</p>
+    <button class="btn" id="share" type="button">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12.04 2a9.9 9.9 0 0 0-8.5 15l-1.4 5 5.13-1.35A9.9 9.9 0 1 0 12.04 2zm0 18.1a8.2 8.2 0 0 1-4.18-1.15l-.3-.18-3.04.8.81-2.97-.2-.31a8.2 8.2 0 1 1 6.91 3.81zm4.5-6.14c-.25-.12-1.46-.72-1.69-.8-.23-.08-.39-.12-.55.12-.17.25-.64.8-.78.97-.14.16-.29.18-.53.06a6.7 6.7 0 0 1-3.32-2.9c-.25-.43.25-.4.72-1.33.08-.16.04-.3-.02-.43-.06-.12-.55-1.330-.76-1.82-.2-.48-.4-.41-.55-.42h-.47a.9.9 0 0 0-.66.31 2.77 2.77 0 0 0-.86 2.06 4.8 4.8 0 0 0 1 2.55 11 11 0 0 0 4.220 3.72c1.570.68 2.190.74 2.980.62.48-.07 1.46-.6 1.67-1.17.2-.58.2-1.070.14-1.17-.06-.1-.22-.17-.47-.29z"/></svg>
+      Share to WhatsApp
+    </button>
+    <div class="links">
+      <a class="textbtn" id="download" href="#" download>Download</a>
+      <button class="textbtn" id="again2" type="button">New PDF</button>
+    </div>
+    <p class="msg" id="resultMsg" hidden></p>
+  </section>
+
+  <section class="help" id="help">
+    <h2>Every order</h2>
+    <ol>
+      <li>Download the label from Amazon Seller Central.</li>
+      <li>Open the PDF, tap <b>Share</b> and pick <b>Label Sheet</b>.</li>
+      <li>Tap <b>Share to WhatsApp</b> and send it to the print shop.</li>
+    </ol>
+  </section>
+
+  <p class="foot">Runs on your phone. PDFs are never uploaded.</p>
+</main>
+
+<script src="vendor/pdf-lib.min.js"></script>
+<script src="vendor/pdf.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
